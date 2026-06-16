@@ -1,25 +1,11 @@
 // maps.js
-const TILE = {
-  GRASS:0, TALL:1, DIRT:2, PATH:3, WATER_PASS:4,
-  SAND:5, SNOW:6, ROCK:7, ICE:8, FLOOR:9,
-  TREE:10, WATER:11, WALL:12, ROCK_OBJ:13, FENCE:14, WALL_IN:15
-};
+const TILE={GRASS:0,TALL:1,DIRT:2,PATH:3,WATER_PASS:4,SAND:5,SNOW:6,ROCK:7,ICE:8,FLOOR:9,TREE:10,WATER:11,WALL:12,ROCK_OBJ:13,FENCE:14,WALL_IN:15};
 const T=TILE;
-function isPassable(id){ return id < 10; }
-function hasEncounter(id){ return id === T.TALL; }
-const TILE_IMGS = {
-  0:"tiles/grass.png", 1:"tiles/tall_grass.png", 2:"tiles/dirt.png",
-  3:"tiles/path.png",  4:"tiles/water.png",       5:"tiles/sand.png",
-  6:"tiles/snow.png",  7:"tiles/rock_floor.png",  8:"tiles/ice.png",
-  9:"tiles/floor.png",10:"tiles/tree_tile.png",  11:"tiles/water.png",
-  12:"tiles/wall.png",13:"tiles/rock_floor.png", 14:"tiles/wall.png",
-  15:"tiles/wall.png"
-};
-const G=T.GRASS,TL=T.TALL,D=T.DIRT,P=T.PATH,W=T.WATER;
-const S=T.SAND,SN=T.SNOW,R=T.ROCK,IC=T.ICE,FL=T.FLOOR;
-const TR=T.TREE,WA=T.WALL,RO=T.ROCK_OBJ,FE=T.FENCE,WI=T.WALL_IN;
-
-const MAPS = {
+function isPassable(id){return id<10;}
+function hasEncounter(id){return id===T.TALL;}
+const TILE_IMGS={0:"tiles/grass.png",1:"tiles/tall_grass.png",2:"tiles/dirt.png",3:"tiles/path.png",4:"tiles/water.png",5:"tiles/sand.png",6:"tiles/snow.png",7:"tiles/rock_floor.png",8:"tiles/ice.png",9:"tiles/floor.png",10:"tiles/tree_tile.png",11:"tiles/water.png",12:"tiles/wall.png",13:"tiles/rock_floor.png",14:"tiles/wall.png",15:"tiles/wall.png"};
+const G=T.GRASS,TL=T.TALL,D=T.DIRT,P=T.PATH,W=T.WATER,S=T.SAND,SN=T.SNOW,R=T.ROCK,IC=T.ICE,FL=T.FLOOR,TR=T.TREE,WA=T.WALL,RO=T.ROCK_OBJ,FE=T.FENCE,WI=T.WALL_IN;
+const MAPS={
   "hoshino": {
     "name": "ホシノタウン",
     "w": 7,
