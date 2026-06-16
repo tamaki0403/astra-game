@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ポケモンRPG「アストラ地方の冒険」</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0d0f1a;--p1:#141827;--p2:#1c2237;--bd:#2a3455;
+  --ac:#f5c518;--ac2:#4ecdc4;--red:#e74c3c;
+  --tx:#dde3f0;--mu:#7a8aaa;--gh:#2ecc71;--gm:#f39c12;--gl:#e74c3c;
+  --px:'Press Start 2P',monospace;--jp:'Noto Sans JP',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--jp);overflow:hidden;user-select:none}
+
+/* ===== タイトル ===== */
+#ti{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;gap:14px;padding:24px;background:linear-gradient(160deg,#0d0f1a 40%,#1a1040)}
+.tlogo{font-family:var(--px);font-size:clamp(9px,2.5vw,13px);color:var(--ac);text-align:center;line-height:2.4}
+.tsub{font-size:.6em;color:var(--ac2);display:block;margin-top:4px}
+.tinp{width:100%;max-width:300px;padding:10px 14px;background:var(--p2);border:2px solid var(--bd);border-radius:5px;color:var(--tx);font-size:14px;font-family:var(--jp);outline:none}
+.tinp:focus{border-color:var(--ac)}.tinp::placeholder{color:var(--mu)}
+.tbtns{display:flex;flex-direction:column;gap:8px;width:100%;max-width:300px}
+.tbtn{padding:12px;border:2px solid var(--bd);border-radius:5px;font-family:var(--px);font-size:9px;cursor:pointer;background:var(--p2);color:var(--tx)}
+.tbtn.pri{background:var(--ac);color:#111;border-color:var(--ac)}
+.tbtn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ===== メインレイアウト ===== */
+#grd{display:none;height:100dvh;grid-template-columns:65fr 35fr;grid-template-rows:60fr 40fr}
+/* 通常時: TL=ゲーム, TR=ログ, BR=目的 */
+/* バトル時: TL=バトルシーン, TR=HP/技, BL=ログ/選択肢 */
+
+/* ===== 左パネル（ゲームキャンバス） ===== */
+#left{grid-column:1;grid-row:1/3;position:relative;background:#000;overflow:hidden}
+#game-canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+
+/* コントロール（キャンバス上に重ねる） */
+#controls{position:absolute;bottom:12px;left:12px;z-index:10}
+#dpad{display:grid;grid-template-columns:40px 40px 40px;grid-template-rows:40px 40px 40px;gap:2px}
+.dpad-btn{background:#fff2;border:2px solid #fff4;border-radius:6px;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .1s;touch-action:none}
+.dpad-btn:active,.dpad-btn.active{background:#f5c51866;border-color:var(--ac)}
+.dpad-center{background:none;border:none;pointer-events:none}
+
+#action-btns{position:absolute;bottom:12px;right:12px;z-index:10;display:flex;gap:8px;flex-direction:column;align-items:flex-end}
+.act-btn{width:56px;height:56px;border-radius:50%;border:2px solid #fff4;background:#fff2;color:#fff;font-size:10px;font-family:var(--px);cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+.act-btn:active{background:var(--ac2);color:#111;border-color:var(--ac2)}
+
+/* バトルシーン（左パネル内） */
+#bscene{display:none;position:absolute;inset:0;background:#111825}
+.bs-bg{position:absolute;inset:0;background:linear-gradient(180deg,#1a1f2e 0%,#0d1218 60%,#1a1408 100%)}
+.bs-ground{position:absolute;bottom:0;left:0;right:0;height:35%;background:linear-gradient(180deg,#2a1f0a,#1a1205);border-top:2px solid #3a2a10}
+.sp-e{position:absolute;top:8%;right:12%;width:96px;height:96px;image-rendering:pixelated}
+.sp-m{position:absolute;bottom:32%;left:8%;width:96px;height:96px;image-rendering:pixelated;transform:scaleX(-1)}
+
+/* バトル中のログ+選択肢（左パネル下部オーバーレイ） */
+#battle-bottom{display:none;position:absolute;bottom:0;left:0;right:0;z-index:20;background:#0d0f1aee;border-top:2px solid var(--bd)}
+.bb-log{padding:8px 10px;font-size:12px;line-height:1.7;color:var(--tx);min-height:60px;max-height:100px;overflow-y:auto}
+.bb-choices{display:flex;flex-direction:column;gap:5px;padding:8px}
+.bb-choice{padding:8px 12px;background:var(--p2);border:2px solid var(--bd);border-radius:4px;color:var(--tx);font-size:12px;cursor:pointer;text-align:left;font-family:var(--jp)}
+.bb-choice:hover{border-color:var(--ac2)}
+
+/* ===== 右上: ログ / バトルUI ===== */
+#right-top{grid-column:2;grid-row:1;display:flex;flex-direction:column;border-left:1px solid var(--bd);overflow:hidden}
+/* 通常時ログ */
+#log-panel{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.log-ttl{font-family:var(--px);font-size:8px;color:var(--ac);padding:8px;border-bottom:1px solid var(--bd)}
+#log-prev{flex:1;padding:8px;font-size:11px;color:var(--mu);opacity:.6;overflow-y:auto;border-bottom:1px solid var(--bd)}
+#log-curr{flex:1.5;padding:8px;font-size:12px;color:var(--tx);overflow-y:auto;display:flex;flex-direction:column}
+#log-curr-txt{flex:1;overflow-y:auto;line-height:1.75}
+#log-nav{padding:6px 8px;border-top:1px solid var(--bd);display:none}
+#log-nav-btn{padding:6px 14px;background:var(--ac);border:none;border-radius:4px;font-family:var(--px);font-size:8px;color:#111;cursor:pointer}
+/* バトルUI（右上） */
+#battle-ui{display:none;flex-direction:column;gap:6px;padding:8px;overflow-y:auto;height:100%}
+.bui-ttl{font-family:var(--px);font-size:8px;color:var(--ac);margin-bottom:4px}
+.frow{margin-bottom:6px}
+.fn{font-weight:700;font-size:12px}.fb{font-family:monospace;font-size:10px}
+.fspe{font-size:10px;color:var(--mu);margin-top:1px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.mvb{padding:7px 4px;background:#1a2038;border:2px solid #2a3860;border-radius:4px;color:var(--tx);font-size:10px;cursor:pointer;text-align:center;line-height:1.3;font-family:var(--jp)}
+.mvb:hover{border-color:var(--ac);background:#232e50}
+.mvb small{display:block;color:var(--mu);font-size:8px}
+.bacts{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.ab{padding:5px 7px;background:var(--p2);border:1px solid var(--bd);border-radius:4px;color:var(--mu);font-size:10px;cursor:pointer}
+.ab:hover{border-color:var(--ac2);color:var(--tx)}
+.bft{font-size:9px;color:var(--mu);padding:3px 0;border-top:1px solid var(--bd)}
+.hc-hi{color:var(--gh)}.hc-mi{color:var(--gm)}.hc-lo{color:var(--gl)}
+
+/* ===== 右下: 目的 ===== */
+#right-bot{grid-column:2;grid-row:2;border-left:1px solid var(--bd);border-top:1px solid var(--bd);padding:8px;overflow-y:auto}
+.obj-ttl{font-family:var(--px);font-size:8px;color:var(--ac);margin-bottom:6px}
+#objective{font-size:11px;line-height:1.7;color:var(--tx)}
+.obj-sub{font-size:10px;color:var(--mu);margin-top:4px}
+
+/* ===== インベントリ ===== */
+#inv{display:none;position:fixed;inset:0;background:#0d0f1af5;z-index:200;overflow-y:auto;padding:16px}
+.inv-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.inv-ttl{font-family:var(--px);font-size:10px;color:var(--ac)}
+.inv-close{padding:4px 10px;background:var(--p2);border:1px solid var(--bd);border-radius:4px;color:var(--mu);font-size:10px;cursor:pointer}
+.inv-tabs{display:flex;gap:6px;margin-bottom:12px}
+.inv-tab{padding:6px 12px;background:var(--p2);border:1px solid var(--bd);border-radius:4px;color:var(--mu);font-size:11px;cursor:pointer}
+.inv-tab.active{border-color:var(--ac);color:var(--ac)}
+#inv-content{max-width:500px}
+.mc{background:var(--p2);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:5px;padding:10px 12px;margin-bottom:8px;font-size:12px;line-height:1.8}
+.mc b{color:var(--ac2)}
+.mca{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.mca button{padding:4px 9px;background:var(--p1);border:1px solid var(--bd);border-radius:3px;color:var(--mu);font-size:10px;cursor:pointer}
+.mca button:hover{border-color:var(--ac2);color:var(--tx)}
+.dxgr{display:grid;grid-template-columns:1fr 1fr;gap:3px;font-size:11px}
+.dxe{padding:3px 6px;border-radius:3px;background:var(--p2);color:var(--mu)}.dxe.own{color:var(--gh)}
+.shpb{display:block;width:100%;max-width:480px;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-size:12px;cursor:pointer;text-align:left;margin-bottom:5px;font-family:var(--jp)}
+.shpb small{display:block;color:var(--mu);font-size:10px}.shpb:hover{border-color:var(--ac)}
+.shplk{padding:7px 12px;color:var(--mu);font-size:11px;border-left:2px solid var(--bd);margin-bottom:5px}
+.stab{display:block;width:100%;max-width:480px;padding:12px;background:var(--p2);border:2px solid var(--bd);border-radius:8px;color:var(--tx);font-size:15px;cursor:pointer;text-align:center;margin-bottom:9px;font-family:var(--jp)}
+.stab:hover{border-color:var(--ac)}
+.nse{background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:9px 12px;margin-bottom:7px;font-size:12px;line-height:1.8;max-width:480px}
+.nse b{display:block;color:var(--ac2);margin-bottom:3px}
+.bkbtn{display:block;padding:8px 14px;background:var(--p1);border:1px solid var(--bd);border-radius:4px;color:var(--mu);font-size:11px;cursor:pointer;margin-top:10px}
+/* モーダル */
+.mov{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;z-index:300}
+.mbx{background:var(--p1);border:2px solid var(--bd);border-radius:10px;padding:14px;min-width:240px;max-width:320px;display:flex;flex-direction:column;gap:7px}
+.mbx h3{font-family:var(--px);font-size:9px;color:var(--ac);margin-bottom:4px}
+.mbb{padding:9px 12px;background:var(--p2);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-size:12px;cursor:pointer;text-align:left;font-family:var(--jp)}
+.mbb:hover{border-color:var(--ac2);color:var(--ac2)}
+/* トースト */
+.tst{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--p2);border:1px solid var(--bd);border-radius:8px;padding:9px 14px;font-size:12px;color:var(--tx);z-index:500;max-width:90vw;text-align:center;animation:fup .3s ease;line-height:1.6;pointer-events:none}
+@keyframes fup{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--p1)}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+
+/* レスポンシブ */
+@media(max-width:600px){#grd{grid-template-columns:1fr;grid-template-rows:55dvh 25dvh 20dvh}
+#left{grid-column:1;grid-row:1}#right-top{grid-column:1;grid-row:2;border-left:none;border-top:1px solid var(--bd)}
+#right-bot{grid-column:1;grid-row:3;border-left:none}}
+</style>
+</head>
+<body>
+
+<!-- タイトル -->
+<div id="ti">
+  <div class="tlogo">⬛🟨⬛🟨⬛<br>ポケモンRPG<span class="tsub">アストラ地方の冒険</span></div>
+  <input class="tinp" id="pname" type="text" maxlength="12" placeholder="トレーナー名を入力…">
+  <div class="tbtns">
+    <button class="tbtn pri" id="newbtn">🎮 はじめから</button>
+    <button class="tbtn" id="conbtn" disabled>▶ つづきから</button>
+    <button class="tbtn" id="rsbtn" style="border-color:#e74c3c33;color:#e74c3c66;font-size:8px">🗑 データをリセット</button>
+  </div>
+</div>
+
+<!-- メイングリッド -->
+<div id="grd">
+
+  <!-- 左: ゲームキャンバス -->
+  <div id="left">
+    <!-- タイルマップ -->
+    <canvas id="game-canvas"></canvas>
+    <!-- バトルシーン -->
+    <div id="bscene">
+      <div class="bs-bg"></div>
+      <div class="bs-ground"></div>
+      <img class="sp-e" id="sp-e" src="" onload="this.style.display='block'" onerror="this.style.display='none'">
+      <img class="sp-m" id="sp-m" src="" onload="this.style.display='block'" onerror="this.style.display='none'">
+    </div>
+    <!-- バトル下部（ログ＋選択肢） -->
+    <div id="battle-bottom">
+      <div class="bb-log" id="bb-log"></div>
+      <div class="bb-choices" id="bb-choices" style="display:none"></div>
+    </div>
+    <!-- 操作 -->
+    <div id="controls">
+      <div id="dpad">
+        <div></div>
+        <div class="dpad-btn" id="dbtn-up"   data-dir="up">↑</div>
+        <div></div>
+        <div class="dpad-btn" id="dbtn-left" data-dir="left">←</div>
+        <div class="dpad-center"></div>
+        <div class="dpad-btn" id="dbtn-right" data-dir="right">→</div>
+        <div></div>
+        <div class="dpad-btn" id="dbtn-down"  data-dir="down">↓</div>
+        <div></div>
+      </div>
+    </div>
+    <div id="action-btns">
+      <button class="act-btn" id="btn-action">調べる<br>A</button>
+      <button class="act-btn" id="btn-inv" style="background:#4ecdc422;border-color:var(--ac2)">E<br>持ち物</button>
+    </div>
+  </div>
+
+  <!-- 右上: ログ / バトルUI -->
+  <div id="right-top">
+    <!-- 通常ログ -->
+    <div id="log-panel">
+      <div class="log-ttl">📜 ログ</div>
+      <div id="log-prev"><div id="lprev-txt" style="color:var(--mu)">— — — — —</div></div>
+      <div id="log-curr">
+        <div id="log-curr-txt">— — — — —</div>
+        <div id="log-nav"><button id="log-nav-btn">▶️ つぎへ</button></div>
+      </div>
+    </div>
+    <!-- バトルUI -->
+    <div id="battle-ui">
+      <div class="bui-ttl" id="bttl">⚔️ バトル</div>
+      <div class="frow">
+        <div class="fn" id="en">—</div>
+        <div class="fb" id="eb">HP —/—</div>
+        <div class="fspe" id="espe">素早さ —</div>
+      </div>
+      <div class="frow" style="border-top:1px solid var(--bd);padding-top:5px">
+        <div class="fn" id="mn">—</div>
+        <div class="fb" id="mb">HP —/—</div>
+        <div class="fspe" id="mspe">素早さ —</div>
+      </div>
+      <div class="mgrid" id="mvbtns"></div>
+      <div class="bacts" id="abtns"></div>
+      <div class="bft" id="bft"></div>
+    </div>
+  </div>
+
+  <!-- 右下: 目的 -->
+  <div id="right-bot">
+    <div class="obj-ttl">🗺️ 次の目的</div>
+    <div id="objective">—</div>
+  </div>
+</div>
+
+<!-- インベントリ -->
+<div id="inv">
+  <div class="inv-header">
+    <div class="inv-ttl">📦 インベントリ</div>
+    <button class="inv-close" onclick="toggleInv()">✕ 閉じる [E]</button>
+  </div>
+  <div class="inv-tabs">
+    <button class="inv-tab active" onclick="showInvTab('party')">📦 手持ち</button>
+    <button class="inv-tab" onclick="showInvTab('box')">📥 ボックス</button>
+    <button class="inv-tab" onclick="showInvTab('note')">🗺️ ノート</button>
+    <button class="inv-tab" onclick="showInvTab('dex')">📖 図鑑</button>
+    <button class="inv-tab" onclick="showInvTab('shop')">🛒 ショップ</button>
+  </div>
+  <div id="inv-content"></div>
+</div>
+
+<script src="data.js"></script>
+<script src="maps.js"></script>
+<script>
+"use strict";
+const G2=GAME_DATA, PM=G2.PARTY_MAX;
+const TC={"無":"#a8a878","炎":"#f08030","水":"#6890f0","草":"#78c850","雷":"#f8d030","岩":"#b8a038","氷":"#98d8d8","竜":"#7038f8","超":"#f85888"};
+
+// ===== セーブ =====
+let state=null;
+function sv(s){localStorage.setItem("astra_tile",JSON.stringify(s));}
+function ld(){try{const s=localStorage.getItem("astra_tile");return s?JSON.parse(s):null;}catch{return null;}}
+function ng(name){return{name,coins:150,balls:10,gballs:0,potion:2,hipotion:0,emmaball:0,keystone:0,it_power:0,it_lens:0,it_sole:0,it_belt:0,it_mega:0,badges:0,story_pos:0,flags:[],wins:0,party:[],dex_seen:[],dex_owned:[],char:"male",currentMap:"hoshino",playerX:9,playerY:12};}
+
+// ===== 汎用 =====
+function ri(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function rf(a,b){return Math.random()*(b-a)+a;}
+function rc(a){return a[Math.floor(Math.random()*a.length)];}
+function wc(p){let t=p.reduce((s,e)=>s+e.rate,0),r=Math.random()*t;for(const e of p){r-=e.rate;if(r<=0)return e;}return p[0];}
+function disp(n){return n==="EMMA"?"EMMA（エマ）":n==="GROX"?"GROX（グロックス）":n;}
+function hb(c,m,sz=10){const f=Math.max(0,Math.round(sz*c/m));return"█".repeat(f)+"░".repeat(sz-f);}
+function ir(iv){const r=iv.reduce((a,b)=>a+b,0)/(15*6);return r>=.75?"🥇":r>=.5?"🥈":"🥉";}
+function riv(){return Array.from({length:6},()=>ri(0,15));}
+function smul(s){return s>=0?(2+s)/2:2/(2-s);}
+function mkid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function fid(id){return state.party.find(m=>String(m.id)===String(id));}
+function toast(msg){const e=document.createElement("div");e.className="tst";e.innerHTML=msg.replace(/\n/g,"<br>");document.body.appendChild(e);setTimeout(()=>e.remove(),3500);}
+
+// ===== ステータス =====
+function cs(sp,lv,iv){const d=G2.SPECIES[sp],v=iv||Array(6).fill(8),b=[d.hp,d.atk,d.df,d.spa,d.spd,d.spe];const hp=Math.floor((b[0]*2+v[0])*lv/100)+lv+10;return[hp,...b.slice(1).map((x,i)=>Math.floor((x*2+v[i+1])*lv/100)+5)];}
+function ml(sp,lv){const d=G2.SPECIES[sp],m=[...d.moves];for(const[l,mv]of Object.entries(d.learnset)){if(+l<=lv&&!m.includes(mv))m.push(mv);}return m.slice(-4);}
+function e2n(lv){return lv*18;}
+function mmhp(m){return cs(m.sp,m.lv,m.iv)[0];}
+function mst(m){return cs(m.sp,m.lv,m.iv);}
+function mkm(sp,lv,iv,op={}){iv=iv||riv();const[mhp]=cs(sp,lv,iv);return{id:op.id||mkid(),sp,lv,iv,exp:0,hp:mhp,moves:ml(sp,lv),item:null,inP:op.inP!==false,isLd:!!op.isLd};}
+
+// ===== 状態管理 =====
+function pty(){return state.party.filter(m=>m.inP).slice(0,PM);}
+function bxl(){return state.party.filter(m=>!m.inP);}
+function lad(){const p=pty();return p.find(m=>m.isLd)||p[0]||null;}
+function alv(xid){return pty().filter(m=>String(m.id)!==String(xid)&&m.hp>0);}
+function amn(mon){const tp=pty().length<PM;mon.inP=tp;if(tp&&pty().every(m=>!m.isLd))mon.isLd=true;state.party.push(mon);if(!state.dex_seen.includes(mon.sp))state.dex_seen.push(mon.sp);if(!state.dex_owned.includes(mon.sp))state.dex_owned.push(mon.sp);sv(state);return tp;}
+function af(k){if(!state.flags.includes(k))state.flags.push(k);}
+function hf(k){return state.flags.includes(k);}
+function msn(sp){if(!state.dex_seen.includes(sp))state.dex_seen.push(sp);}
+const KR=new Set(["coins","keystone","emmaball","it_mega"]);
+function gi(r){for(const[k,v]of Object.entries(r)){if(k==="coins")state.coins+=v;else if(k in state)state[k]+=v;}sv(state);}
+const HC={"パワーリスト":"it_power","ミラクルレンズ":"it_lens","クイックソール":"it_sole","がんばりベルト":"it_belt","メガストーン":"it_mega"};
+function sh(id,item){const m=fid(id);if(!m)return false;if(m.item&&HC[m.item])state[HC[m.item]]++;if(item){const c=HC[item];if(!c||(state[c]||0)<=0){if(m.item&&HC[m.item])state[HC[m.item]]--;return false;}state[c]--;}m.item=item;sv(state);return true;}
+function tq(){const l=Math.floor(state.coins/4);state.coins-=l;sv(state);return l;}
+function bi(col,cost){if(state.coins<cost)return false;state.coins-=cost;state[col]++;sv(state);return true;}
+function ui(col){if((state[col]||0)<=0)return false;state[col]--;sv(state);return true;}
+function ev2(id){const m=fid(id);if(!m)return null;const ev=G2.SPECIES[m.sp].evolve;if(!ev||m.lv<ev[0])return null;const old=m.sp;m.sp=ev[1];m.hp=mmhp(m);if(!state.dex_seen.includes(ev[1]))state.dex_seen.push(ev[1]);if(!state.dex_owned.includes(ev[1]))state.dex_owned.push(ev[1]);sv(state);return[old,ev[1]];}
+function toBox2(id){const p=pty();if(p.length<=1)return false;const m=fid(id);if(!m||!m.inP)return false;m.inP=false;m.isLd=false;const np=pty();if(np.length&&!np.some(x=>x.isLd))np[0].isLd=true;sv(state);return true;}
+function fromBox2(id){if(pty().length>=PM)return false;const m=fid(id);if(!m||m.inP)return false;m.inP=true;sv(state);return true;}
+function healA(){state.party.forEach(m=>m.hp=mmhp(m));sv(state);}
+function cq(idx){if(state.story_pos!==idx)return[];const q=G2.QUESTS[idx];state.story_pos++;const ln=[];if(q.reward&&q.kind!=="check"){const f={};for(const[k,v]of Object.entries(q.reward))if(KR.has(k))f[k]=v;if(Object.keys(f).length){gi(f);const m={coins:"💰{}コイン",keystone:"💠ふしぎな石×{}",emmaball:"🟣EMMAボール×{}",it_mega:"💎メガストーン×{}"};ln.push("🎁 "+Object.entries(f).map(([k,v])=>(m[k]||k+"×{}").replace("{}",v)).join(" / "));}}sv(state);return ln;}
+function ckp(c){const[k,v]=c;if(k==="type")return state.party.some(m=>G2.SPECIES[m.sp].type===v);if(k==="level")return state.party.some(m=>m.lv>=v);if(k==="species")return state.party.some(m=>m.sp===v);if(k==="flag")return hf(v);return false;}
+function bl2(loc,btn){const m={gym:"🏟️ ジム",lab:"🔬 研究所",news:"📺 ニュース",plaza:"❗ 広場",outskirt:"❗ 村はずれ",lake:"🌕 月夜の湖",anthronix:"🏢 Anthronix社",ev:"❗ イベント",nushi:"⚡ ヌシ",emma:"🤖 EMMA",four:"🏛️ 四天王",champ:"👑 チャンピオン"};return m[btn]||btn;}
+
+// ===== ログシステム =====
+function pushLog(text){
+  const prevEl=document.getElementById("lprev-txt");
+  const currEl=document.getElementById("log-curr-txt");
+  if(prevEl)prevEl.innerHTML=currEl?currEl.innerHTML:"— — —";
+  if(currEl)currEl.innerHTML=fmtT(text);
+  const c=document.getElementById("log-curr");if(c)c.scrollTop=0;
+}
+function setNavBtn(label,fn){
+  const nav=document.getElementById("log-nav"),btn=document.getElementById("log-nav-btn");
+  if(fn){nav.style.display="block";btn.textContent=label;btn.onclick=fn;}
+  else nav.style.display="none";
+}
+function fmtT(raw){
+  const ls=raw.split("\n");let h="";
+  for(const l of ls){if(h===""&&l&&!l.match(/^[　（・—▶◀✨🎁🏆💰🎊🌟💎☠️🔥⚡❄️👁️📘🎉]/))h+=`<span style="display:block;font-family:var(--px);font-size:9px;color:var(--ac2);margin-bottom:4px">${l}</span>`;else h+=l+"<br>";}
+  return h;
+}
+function updateObjective(){
+  const pos=state.story_pos,el=document.getElementById("objective");if(!el)return;
+  if(pos>=G2.QUESTS.length){el.textContent="🏆 殿堂入り！全クリア済み";return;}
+  const q=G2.QUESTS[pos];
+  const mapName=G2.LOCATIONS?.[q.loc]?.name||q.loc||"";
+  el.innerHTML=`<div style="font-weight:700;color:var(--ac2);margin-bottom:4px">${q.ch}</div>「${q.title}」<div class="obj-sub">📍 ${mapName}へ</div>`;
+}
+
+// ===== シーン（会話）システム =====
+let curScene=null,sceneActive=false;
+function showScene(title,pages,onFin,opts={}){
+  curScene={title,pages,i:0,onFin,opts};sceneActive=true;
+  pushLog(`📜 ${title}`);
+  renderScenePage();
+}
+function renderScenePage(){
+  const s=curScene;
+  pushLog(s.pages[s.i]);
+  if(s.i<s.pages.length-1){
+    setNavBtn("▶️ つぎへ",()=>{s.i++;renderScenePage();});
+  } else if(s.opts.choices){
+    setNavBtn(null,null);
+    showChoicesBB(s.opts.choices,s.opts);
+  } else if(s.opts.bfn){
+    setNavBtn(s.opts.fl||"⚔️ 挑む",()=>{closeScene();s.opts.bfn();});
+  } else {
+    setNavBtn(s.opts.fl||"✅ とじる",()=>{closeScene();s.onFin?.();});
+  }
+}
+function showChoicesBB(choices,opts){
+  const box=document.getElementById("bb-choices");
+  box.innerHTML="";box.style.display="flex";
+  document.getElementById("bb-log").style.display="none";
+  document.getElementById("battle-bottom").style.display="block";
+  for(const[lbl,rep,noProg]of choices){
+    const btn=document.createElement("button");btn.className="bb-choice";btn.textContent=lbl;
+    btn.onclick=()=>{
+      box.style.display="none";box.innerHTML="";
+      document.getElementById("bb-log").style.display="block";
+      if(!battle)document.getElementById("battle-bottom").style.display="none";
+      pushLog(`▶ ${lbl}`);
+      if(rep===null){closeScene();opts.bfn?.();return;}
+      const ep=[rep];if(opts.ac)ep.push(opts.ac);
+      if(opts.bfn&&!noProg)showScene(curScene.title,ep,null,{fl:"⚔️ 挑戦する",bfn:opts.bfn});
+      else showScene(curScene.title,ep,noProg?()=>closeScene():curScene.onFin,{});
+    };
+    box.appendChild(btn);
+  }
+}
+function closeScene(){
+  sceneActive=false;curScene=null;setNavBtn(null,null);
+  if(!battle){
+    document.getElementById("battle-bottom").style.display="none";
+    document.getElementById("bb-choices").style.display="none";
+    document.getElementById("bb-log").style.display="block";
+  }
+  updateObjective();
+}
+
+// ===== タイルマップエンジン =====
+const TILE_SIZE=48;
+const imgCache={};
+function loadImg(src){
+  if(imgCache[src])return imgCache[src];
+  const img=new Image();img.src=src;imgCache[src]=img;return img;
+}
+function spriteFile(sp){
+  const no=G2.SPECIES_NO?.[sp];
+  return no?`sprites/mon_${String(no).padStart(3,'0')}.png`:`sprites/mon_${sp}.png`;
+}
+function npcHidden(n){
+  if(!n||!n.hideKey)return false;
+  switch(n.hideKey){
+    case "blockerGone":        return state.story_pos>5;
+    case "caveinGone":         return state.story_pos>9;
+    case "emmaHanamiGone":     return state.story_pos!==12;
+    case "emmaShirahanaGone":  return state.story_pos!==19;
+    case "yuinasuGone":        return state.story_pos>20;
+    case "emmaLakeHidden":     return state.story_pos<20;
+    case "dalionOutsideGone":  return state.story_pos>27;
+    case "emmaRoadGone":       return state.story_pos>36;
+    default: return false;
+  }
+}
+function preloadAssets(){
+  Object.values(TILE_IMGS).forEach(src=>loadImg(src));
+  ["tiles/tree_tile.png","objects/tree.png","objects/rock.png","objects/sign.png","objects/billboard.png","objects/flower.png",
+   "buildings/house.png","buildings/center.png","buildings/gym.png","buildings/shop.png","buildings/lab.png","buildings/corp.png","buildings/port.png",
+   "chars/male.png","chars/female.png",
+   "sprites/mon_001.png","sprites/mon_004.png","sprites/mon_007.png","sprites/mon_021.png","sprites/mon_031.png",
+   "sprites/mon_043.png","sprites/mon_044.png","sprites/mon_045.png"
+  ].forEach(src=>loadImg(src));
+}
+
+// プレイヤー
+const player={x:9,y:12,facing:"down",moving:false,moveTimer:0,visible:true};
+let currentMap=null;
+
+function loadMap(mapId){
+  const md=MAPS[mapId];if(!md)return;
+  currentMap=md;
+  state.currentMap=mapId;
+  // 旧セーブ等で範囲外/通行不可の座標になっている場合はplayerStartへ
+  const ps=md.playerStart||{x:0,y:0};
+  if(player.x<0||player.y<0||player.x>=md.w||player.y>=md.h||!canMove(player.x,player.y)){
+    player.x=ps.x;player.y=ps.y;
+    state.playerX=ps.x;state.playerY=ps.y;
+  }
+  if(state.party.length===0){
+    // パーティなし→マップ描画のみ
+  }
+  sv(state);
+  updateObjective();
+  startRenderLoop();
+}
+
+function getMapTile(x,y){
+  if(!currentMap||x<0||y<0||x>=currentMap.w||y>=currentMap.h)return 10;
+  return currentMap.ground[y][x];
+}
+
+function canMove(x,y){
+  if(!currentMap||x<0||y<0||x>=currentMap.w||y>=currentMap.h)return false;
+  const tid=getMapTile(x,y);
+  if(!isPassable(tid))return false;
+  // オブジェクトチェック
+  const obj=currentMap.objects?.find(o=>{
+    if(npcHidden(o))return false;
+    if(o.type==="building")return x>=o.x&&x<o.x+(o.w||1)&&y>=o.y&&y<o.y+(o.h||1);
+    if(o.type==="object")return x===o.x&&y===o.y;
+    return false;
+  });
+  if(obj)return false;
+  // NPCチェック
+  const npc=currentMap.npcs?.find(n=>n.x===x&&n.y===y&&!npcHidden(n));
+  if(npc)return false;
+  return true;
+}
+
+// カメラ
+function getCamera(canvas){
+  const tilesW=Math.ceil(canvas.width/TILE_SIZE)+2;
+  const tilesH=Math.ceil(canvas.height/TILE_SIZE)+2;
+  let cx=player.x-Math.floor(tilesW/2);
+  let cy=player.y-Math.floor(tilesH/2);
+  if(currentMap){
+    cx=Math.max(0,Math.min(cx,currentMap.w-tilesW));
+    cy=Math.max(0,Math.min(cy,currentMap.h-tilesH));
+  }
+  return{x:cx,y:cy,w:tilesW,h:tilesH};
+}
+
+// 描画
+let animFrame=null;
+function startRenderLoop(){
+  if(animFrame)cancelAnimationFrame(animFrame);
+  function loop(){animFrame=requestAnimationFrame(loop);renderGame();}
+  loop();
+}
+function renderGame(){
+  const canvas=document.getElementById("game-canvas");
+  const ctx=canvas.getContext("2d");
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}
+  ctx.clearRect(0,0,W,H);
+  if(!currentMap)return;
+  ctx.imageSmoothingEnabled=false;
+  const cam=getCamera(canvas);
+  const ox=-(player.x-cam.x-(W/2/TILE_SIZE))*TILE_SIZE+Math.floor(W/2)%TILE_SIZE;
+  const oy=-(player.y-cam.y-(H/2/TILE_SIZE))*TILE_SIZE+Math.floor(H/2)%TILE_SIZE;
+  // 地面タイル
+  for(let ty=cam.y;ty<Math.min(cam.y+cam.h,currentMap.h);ty++){
+    for(let tx=cam.x;tx<Math.min(cam.x+cam.w,currentMap.w);tx++){
+      const tid=getMapTile(tx,ty);
+      const px=(tx-cam.x)*TILE_SIZE+ox;const py=(ty-cam.y)*TILE_SIZE+oy;
+      const imgSrc=TILE_IMGS[tid];
+      const img=imgSrc?loadImg(imgSrc):null;
+      if(img&&img.complete&&img.naturalWidth){
+        ctx.drawImage(img,px,py,TILE_SIZE,TILE_SIZE);
+      } else {
+        // フォールバックカラー
+        const fallback=["#4a8a3a","#2a5a20","#8a6a3a","#9a9080","#3a6aaa","#ccaa60","#d8e8f0","#706a60","#b8d8f0","#c8a870","#2a5a20","#3a6aaa","#606060","#606060","#605060","#302820"];
+        ctx.fillStyle=fallback[tid]||"#444";ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);
+      }
+      // 通行不可の視覚化（デバッグ用・後で削除可）
+      // if(!isPassable(tid)){ctx.fillStyle="#ff000020";ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);}
+    }
+  }
+  // オブジェクト
+  if(currentMap.objects){
+    for(const obj of currentMap.objects){
+      if(npcHidden(obj))continue;
+      const px=(obj.x-cam.x)*TILE_SIZE+ox;const py=(obj.y-cam.y)*TILE_SIZE+oy;
+      const img=loadImg(obj.sprite);
+      const sw=TILE_SIZE*(obj.w||1),sh=TILE_SIZE*(obj.h||1);
+      if(img&&img.complete&&img.naturalWidth){
+        ctx.drawImage(img,px,py,sw,sh);
+      } else {
+        ctx.fillStyle=obj.type==="building"?"#8080a0":"#408040";
+        ctx.fillRect(px,py,sw,sh);
+        ctx.strokeStyle="#333";ctx.strokeRect(px,py,sw,sh);
+      }
+    }
+  }
+  // NPC
+  if(currentMap.npcs){
+    for(const npc of currentMap.npcs){
+      if(npcHidden(npc))continue;
+      const px=(npc.x-cam.x)*TILE_SIZE+ox;const py=(npc.y-cam.y)*TILE_SIZE+oy;
+      const img=loadImg(npc.sprite||"chars/male.png");
+      if(img&&img.complete&&img.naturalWidth){ctx.drawImage(img,px,py,TILE_SIZE,TILE_SIZE);}
+      else{ctx.fillStyle="#a08060";ctx.fillRect(px+8,py+4,TILE_SIZE-16,TILE_SIZE-8);}
+    }
+  }
+  // イベントマーカー（ドア・看板）
+  if(currentMap.events){
+    for(const ev of currentMap.events){
+      if(ev.type==="door"||ev.type==="exit"){
+        const px=(ev.x-cam.x)*TILE_SIZE+ox;const py=(ev.y-cam.y)*TILE_SIZE+oy;
+        ctx.fillStyle="#f5c51840";ctx.fillRect(px+4,py+4,TILE_SIZE-8,TILE_SIZE-8);
+      }
+      if(ev.type==="sign"){
+        const px=(ev.x-cam.x)*TILE_SIZE+ox;const py=(ev.y-cam.y)*TILE_SIZE+oy;
+        const img=loadImg("objects/sign.png");
+        if(img&&img.complete)ctx.drawImage(img,px,py,TILE_SIZE,TILE_SIZE);
+      }
+    }
+  }
+  // プレイヤー
+  const ppx=(player.x-cam.x)*TILE_SIZE+ox;
+  const ppy=(player.y-cam.y)*TILE_SIZE+oy;
+  const charImg=loadImg(`chars/${state.char||"male"}.png`);
+  if(charImg&&charImg.complete&&charImg.naturalWidth){
+    ctx.drawImage(charImg,ppx,ppy,TILE_SIZE,TILE_SIZE);
+  } else {
+    ctx.fillStyle="#4080ff";
+    ctx.beginPath();ctx.arc(ppx+TILE_SIZE/2,ppy+TILE_SIZE/2,TILE_SIZE/2-4,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ===== 移動 =====
+const DIRS={up:{dx:0,dy:-1},down:{dx:0,dy:1},left:{dx:-1,dy:0},right:{dx:1,dy:0}};
+let moveInterval=null;
+let activeDir=null;
+
+function tryMove(dir){
+  if(sceneActive||battle)return;
+  const{dx,dy}=DIRS[dir];
+  player.facing=dir;
+  const nx=player.x+dx,ny=player.y+dy;
+  // 通行不可だが案内メッセージを出すマス（ホシノの未開放出口など）
+  const lock=currentMap?.lockedTiles?.find(t=>t.x===nx&&t.y===ny);
+  if(lock){
+    if(lock.unlockStory!==undefined&&lock.target&&state.story_pos>=lock.unlockStory){
+      changeMap(lock.target.map,lock.target.x,lock.target.y);return;
+    }
+    toast(lock.msg);return;
+  }
+  // ストーリー条件未達の出口
+  const lex=currentMap?.events?.find(e=>e.type==="exit"&&e.x===nx&&e.y===ny&&e.requireStory!==undefined);
+  if(lex&&state.story_pos<lex.requireStory){toast(lex.lockedMsg||"…まだ先には進めないようだ。");return;}
+  if(canMove(nx,ny)){
+    player.x=nx;player.y=ny;
+    state.playerX=nx;state.playerY=ny;
+    checkStepEvents();
+  }
+}
+function checkStepEvents(){
+  if(!currentMap)return;
+  // 出口チェック
+  const ev=currentMap.events?.find(e=>(e.type==="exit"||e.type==="door")&&e.x===player.x&&e.y===player.y);
+  if(ev&&ev.type==="exit"){
+    changeMap(ev.target.map,ev.target.x,ev.target.y);return;
+  }
+  // エンカウントチェック（タイル別プール優先）
+  const tid=getMapTile(player.x,player.y);
+  const tilePool=currentMap.encountersByTile?.[String(tid)];
+  if(tilePool&&tilePool.length>0&&currentMap.encounterRate>0&&Math.random()<currentMap.encounterRate){
+    triggerEncounter(tilePool);return;
+  }
+  if(hasEncounter(tid)&&currentMap.encounterRate>0&&Math.random()<currentMap.encounterRate){
+    triggerEncounter();return;
+  }
+}
+function changeMap(mapId,tx,ty){
+  player.x=tx;player.y=ty;
+  state.currentMap=mapId;state.playerX=tx;state.playerY=ty;sv(state);
+  loadMap(mapId);
+  pushLog(`📍 ${MAPS[mapId]?.name||mapId} に入った`);
+  updateObjective();
+}
+function examine(){
+  if(sceneActive||battle)return;
+  const{dx,dy}=DIRS[player.facing];
+  const fx=player.x+dx,fy=player.y+dy;
+  // NPC
+  const npc=currentMap?.npcs?.find(n=>n.x===fx&&n.y===fy&&!npcHidden(n));
+  if(npc){talkToNPC(npc);return;}
+  // イベント
+  const ev=currentMap?.events?.find(e=>e.x===fx&&e.y===fy);
+  if(ev){
+    if(ev.type==="door")return doDoor(ev);
+    else if(ev.type==="sign")showScene("📋 看板",typeof ev.text==="string"?[ev.text]:ev.text,()=>{},{fl:"✅ とじる"});
+    return;
+  }
+  // 水面を調べる→エンカウント
+  const ftid=getMapTile(fx,fy);
+  if(ftid===T.WATER&&currentMap?.waterEncounters?.length){
+    if(Math.random()<0.6){triggerEncounter(currentMap.waterEncounters);}
+    else toast("🌊 静かな水面が広がっている…");
+    return;
+  }
+  // 足元のドア
+  const evBelow=currentMap?.events?.find(e=>e.x===player.x&&e.y===player.y);
+  if(evBelow?.type==="door")doDoor(evBelow);
+}
+function doDoor(ev){
+  if(ev.action==="heal"){
+    healA();
+    showScene(currentMap.name,["🏥 ポケモンを預かりますね。\n……お待たせしました！\nすっかり元気になりましたよ！"],()=>{},{fl:"✅ とじる"});
+    pushLog("🏥 ポケモンが全回復した！");
+    return;
+  }
+  if(ev.action==="shop"){openInvShop();return;}
+  changeMap(ev.target.map,ev.target.x,ev.target.y);
+}
+function talkToNPC(npc){
+  // ヌシポケモン
+  if(npc.isNushi){
+    if(hf("nushi")){
+      showScene("⚡ 高原のヌシ",["ヌシは静かに目を閉じている。\nもう、戦いを求めてはいないようだ。"],()=>{},{fl:"✅ とじる"});
+      return;
+    }
+    if(state.story_pos<17){
+      showScene("⚡ 高原のヌシ",["雷雲をまとった大きな影が、こちらをちらりと見た。\n……まだ何かが足りない。そんな気がする。"],()=>{},{fl:"✅ とじる"});
+      return;
+    }
+    showScene("⚡ 高原のヌシ・ゴロドン",[...G2.NUSHI_INTRO],null,{fl:"⚡ 挑む",bfn:()=>beginNushiBattle()});
+    return;
+  }
+  // 回復NPC
+  if(npc.isHealer){
+    healA();
+    const pages=npc.dialog?.default||["「お預かりしたポケモンは、\nすっかり元気になりましたよ！」"];
+    showScene(currentMap.name,pages,()=>{},{fl:"✅ とじる"});
+    pushLog("🏥 ポケモンが全回復した！");return;
+  }
+  // ショップNPC
+  if(npc.isShop){openInvShop();return;}
+  // ストーリーNPC
+  if(npc.questTrigger!==undefined){
+    handleQuestNPC(npc);return;
+  }
+  // 通常ダイアログ
+  const pos=state.story_pos;
+  let dialog=npc.dialog?.default||["…"];
+  if(npc.dialog?.[pos])dialog=npc.dialog[pos];
+  showScene(currentMap.name,typeof dialog==="string"?[dialog]:dialog,()=>{},{fl:"✅ とじる"});
+}
+function handleQuestNPC(npc){
+  const pos=state.story_pos;
+  let qidx=npc.questTrigger;
+  // questTriggerが配列の場合: 現在のstory_posが含まれる番号を使用
+  if(Array.isArray(qidx)){
+    qidx=qidx.includes(pos)?pos:-1;
+  }
+  // 「条件チェック」クエストの直後がジム戦の場合、同じNPCにそのまま挑戦できるようにする
+  if(qidx!==-1&&pos!==qidx&&pos===qidx+1&&G2.QUESTS[qidx+1]?.kind==="gym"){
+    qidx=pos;
+  }
+  if(qidx!==-1&&pos===qidx){
+    const q=G2.QUESTS[qidx];
+    if(!q)return;
+    const title=`📜 ${q.ch}「${q.title}」`;
+    if(q.kind==="starter"){
+      const pages=q.pages||[""];
+      showScene(title,pages,null,{fl:"🎁 パートナーを選ぶ",bfn:()=>openStarterSelect(qidx)});return;
+    }
+    if(q.kind==="check"){
+      handleCheckQuest(qidx,npc);return;
+    }
+    const pages=q.pages||["…"];
+    let bfn=null,choices=null,ac=null;
+    if(q.kind==="gym"){const g=G2.GYMS[q.gym];const ps=g.intro_pages||pages;if(g.choices){choices=g.choices.map(([l,r])=>[l,r,false]);ac=g.after_choice;}bfn=()=>beginQBattle(qidx);showScene(title,ps,null,choices?{choices,ac,bfn}:{fl:"⚔️ 挑む",bfn});}
+    else if(["boss","wildboss"].includes(q.kind)){if(q.choices){choices=q.choices.map(([l,r])=>[l,r===null?null:r,l==="挑まない"]);ac=q.after_choice;}bfn=()=>beginQBattle(qidx);showScene(title,pages,null,choices?{choices,ac,bfn}:{fl:"⚔️ 挑む",bfn});}
+    else{showScene(title,pages,()=>{const rl=cq(qidx);const np=[...(q.clear_pages||[])];if(rl.length)np.push(rl.join("\n"));if(np.length)showScene(title,np,()=>{},{fl:"✅ とじる"});},{fl:"▶️ つぎへ"});}
+  } else {
+    const dlg=npc.dialog?.default||["…"];
+    showScene(currentMap.name,typeof dlg==="string"?[dlg]:dlg,()=>{},{fl:"✅ とじる"});
+  }
+}
+function handleCheckQuest(idx,npc){
+  const q=G2.QUESTS[idx];const title=`📜 ${q.ch}「${q.title}」`;
+  if(ckp(q.check)){
+    const rl=cq(idx);const pages=[...(q.clear_pages||["達成！"])];
+    const ni=state.story_pos,nq=G2.QUESTS[ni];
+    if(nq?.kind==="gym"&&nq.loc===q.loc){showScene(title,pages,null,{choices:[["今すぐ挑む！",null,false],["また今度にする","わかった。準備ができたら来い。",true]],bfn:()=>beginQBattle(ni)});}
+    else showScene(title,pages,()=>{},{fl:"✅ とじる"});
+  } else {
+    const seen=hf(`seen${idx}`);
+    if(!seen){af(`seen${idx}`);showScene(title,[...(q.pages||["…"])],()=>{},{fl:"✅ とじる"});}
+    else showScene(title,[q.fail||"…まだのようだ。"],()=>{},{fl:"✅ とじる"});
+  }
+}
+
+// ===== スターター選択 =====
+function openStarterSelect(idx){
+  const ic=document.getElementById("inv-content");
+  ic.innerHTML=`<h2 style="font-family:var(--px);font-size:10px;color:var(--ac);margin-bottom:12px">🎁 最初のパートナーを選ぼう</h2>`;
+  for(const sp of G2.STARTERS){
+    const d=G2.SPECIES[sp],tc=TC[d.type]||"var(--bd)";
+    const btn=document.createElement("button");btn.className="stab";btn.style.borderColor=tc;
+    btn.innerHTML=`${G2.TYPE_EMOJI[d.type]||""} <b>${sp}</b><br><small style="color:var(--mu)">${d.type}タイプ</small>`;
+    btn.onclick=()=>pickStarter(sp,idx);
+    ic.appendChild(btn);
+  }
+  document.getElementById("inv").style.display="block";
+}
+function pickStarter(sp,idx){
+  if(state.story_pos!==idx)return;
+  const m=mkm(sp,5,null,{isLd:true});amn(m);af(`st_${sp}`);cq(idx);
+  document.getElementById("inv").style.display="none";
+  pushLog(`🎉 ${disp(sp)}（Lv.5）が仲間になった！\nマクス博士: 良い選択だ。期待しているよ。`);
+  updateObjective();
+}
+
+// ===== エンカウント =====
+function triggerEncounter(pool){
+  pool=pool||currentMap.encounters;if(!pool||pool.length===0)return;
+  const enc=wc(pool);const lv=ri(enc.lvMin,enc.lvMax);
+  const wild=new Fighter(enc.sp,lv);msn(enc.sp);
+  const ld2=lad();if(!ld2||ld2.hp<=0){toast("💀 手持ちにポケモンがいない！");return;}
+  const mine=Fighter.from(ld2);
+  stB({mine,enemies:[wild],kind:"wild",routeNo:null});
+  openBattle("🌿 野生の "+disp(enc.sp)+"（Lv."+lv+"）が現れた！");
+}
+
+// ===== Fighter & バトルエンジン =====
+class Fighter{
+  constructor(sp,lv,iv,boost=1,mid=null){
+    this.sp=sp;this.lv=lv;this.iv=iv||riv();this.mid=mid;
+    const[hp,atk,df,spa,spd,spe]=cs(sp,lv,this.iv);
+    this.mhp=boost!==1?Math.floor(hp*boost):hp;
+    this.atk=atk;this.df=df;this.spa=spa;this.spd=spd;this.spe=spe;
+    this.hp=this.mhp;this.moves=ml(sp,lv);this.item=null;
+    this.stg={atk:0,df:0,spa:0,spd:0,spe:0};this.sts=null;this.slpT=0;this.isMg=false;this._dp=null;
+    this.type=G2.SPECIES[sp].type;
+  }
+  nm(){return this._dp||disp(this.sp);}
+  ef(k){let v=this[k]*smul(this.stg[k]);if(k==="spe"){if(this.item==="クイックソール")v*=1.2;if(this.sts==="まひ")v*=.5;}return Math.max(1,Math.floor(v));}
+  mg(){const M=1.3;this.atk=Math.floor(this.atk*M);this.df=Math.floor(this.df*M);this.spa=Math.floor(this.spa*M);this.spd=Math.floor(this.spd*M);this.spe=Math.floor(this.spe*M);this.isMg=true;this._dp="メガ"+disp(this.sp);}
+  static from(m){const f=new Fighter(m.sp,m.lv,m.iv,1,m.id);f.hp=Math.max(0,Math.min(f.mhp,m.hp));f.moves=m.moves.slice();f.item=m.item;return f;}
+}
+const STIM={"やけど":"炎","まひ":"雷","こおり":"氷"};
+function dmg(a,d,mv){
+  const{type:mt,power:bp,cat}=G2.MOVES[mv];let pw=bp;if(mt===a.type)pw=Math.floor(pw*1.2);
+  const mult=G2.TYPE_CHART[`${mt}|${d.type}`]||1;
+  let av,dv;if(cat==="物理"){av=a.ef("atk");dv=d.ef("df");}else{av=a.ef("spa");dv=d.ef("spd");}
+  let v=(av/Math.max(1,dv))*pw/4;
+  if(a.sts==="やけど"&&cat==="物理")v*=.5;
+  if(a.item==="パワーリスト"&&cat==="物理")v*=1.1;if(a.item==="ミラクルレンズ"&&cat==="特殊")v*=1.1;
+  if(d.item==="がんばりベルト")v*=.9;
+  return[Math.max(1,Math.floor(v*mult*rf(.85,1))),mult];
+}
+function et(m){return m>1?"（バツグン！）":m<1?"（いまひとつ…）":"";}
+function apfx(a,d,mv,lg){for(const fx of G2.MOVES[mv]?.fx||[]){if(fx[0]==="st"){const[,who,st2,dt,ch]=fx;if(Math.random()>=ch)continue;const tg=who==="self"?a:d;if(tg.hp<=0)continue;const nv=Math.max(-6,Math.min(6,tg.stg[st2]+dt));if(nv===tg.stg[st2])continue;tg.stg[st2]=nv;lg.push(`　${tg.nm()} の${{atk:"攻撃",df:"防御",spa:"特攻",spd:"特防",spe:"素早さ"}[st2]}が${dt>0?"⬆️上がった！":"⬇️下がった！"}`);}else if(fx[0]==="status"){const[,st2,ch]=fx;if(Math.random()>=ch)continue;if(d.hp<=0||d.sts)continue;if(STIM[st2]===d.type)continue;d.sts=st2;if(st2==="ねむり")d.slpT=ri(1,3);lg.push(`　${G2.STATUS_EMOJI[st2]} ${d.nm()} は${st2}状態！`);}}}
+function pac(f,lg){if(f.sts==="ねむり"){if(f.slpT>0){f.slpT--;lg.push(`💤 ${f.nm()} は眠っている…`);return false;}f.sts=null;lg.push(`⏰ ${f.nm()} は目を覚ました！`);return true;}if(f.sts==="こおり"){if(Math.random()<.25){f.sts=null;lg.push(`🧊 ${f.nm()} のこおりが溶けた！`);return true;}lg.push(`🧊 ${f.nm()} は凍って動けない！`);return false;}if(f.sts==="まひ"&&Math.random()<.25){lg.push(`⚡ ${f.nm()} はしびれて動けない！`);return false;}return true;}
+function chip(f,lg){if(f.hp<=0)return;if(f.sts==="どく"){const d2=Math.max(1,Math.floor(f.mhp/8));f.hp=Math.max(0,f.hp-d2);lg.push(`☠️ ${f.nm()} は毒のダメージ（-${d2}）`);}else if(f.sts==="やけど"){const d2=Math.max(1,Math.floor(f.mhp/16));f.hp=Math.max(0,f.hp-d2);lg.push(`🔥 ${f.nm()} はやけどのダメージ（-${d2}）`);}}
+function aexp2(mon,amt){const lg=[`✨ ${disp(mon.sp)} は ${amt} EXP！`];mon.exp+=amt;const sl=mon.lv;while(mon.lv<G2.MAX_LEVEL&&mon.exp>=e2n(mon.lv)){mon.exp-=e2n(mon.lv);mon.lv++;const ls=G2.SPECIES[mon.sp].learnset;if(ls[String(mon.lv)]){const nm=ls[String(mon.lv)];if(!mon.moves.includes(nm)){if(mon.moves.length>=4){const dr=mon.moves.reduce((a,b)=>G2.MOVES[a].power<G2.MOVES[b].power?a:b);mon.moves.splice(mon.moves.indexOf(dr),1);lg.push(`📘 ${nm}を覚えた！（${dr}忘れ）`);}else lg.push(`📘 ${nm}を覚えた！`);mon.moves.push(nm);}}}if(mon.lv>sl){mon.hp=mmhp(mon);lg.push(`🎉 ${disp(mon.sp)} Lv.${mon.lv}！`);}return lg;}
+
+let battle=null;
+function ce(){return battle?.enemies[battle.eidx]||null;}
+function iw(){return["wild","blocker"].includes(battle?.kind);}
+function stB(o){battle={mine:o.mine,enemies:o.enemies,eidx:0,kind:o.kind||"wild",trainer:o.trainer||null,questIdx:o.questIdx??null,routeNo:o.routeNo||null,title:o.title||null,runT:0,mgUsed:false,postScene:null};for(const f of o.enemies)msn(f.sp);}
+
+function rturn(mv){
+  const b=battle,w=ce(),wm=rc(w.moves);
+  const mf=b.mine.ef("spe")>w.ef("spe")||(b.mine.ef("spe")===w.ef("spe")&&Math.random()<.5);
+  const seq=mf?[[b.mine,w,mv,"▶"],[w,b.mine,wm,"◀"]]:[[w,b.mine,wm,"◀"],[b.mine,w,mv,"▶"]];
+  const lg=[];
+  for(const[a,d,m2,ar]of seq){if(a.hp<=0)continue;if(!pac(a,lg))continue;const[dv,ml2]=dmg(a,d,m2);d.hp=Math.max(0,d.hp-dv);lg.push(`${ar} ${a.nm()} の ${m2}！ ${d.nm()} に ${dv} ダメージ${et(ml2)}`);apfx(a,d,m2,lg);if(d.hp<=0)break;}
+  chip(b.mine,lg);chip(w,lg);
+  const lm=fid(b.mine.mid);if(lm){lm.hp=b.mine.hp;sv(state);}
+  return lg;
+}
+function edown(){
+  const b=battle,w=ce(),iwd=iw();
+  const exp=w.lv*(iwd?9:12)+(iwd?15:20);
+  const lg=[`🏆 ${w.nm()} を倒した！`];
+  if(b.kind==="wild"){const c=5+w.lv;state.coins+=c;lg.push(`💰 ${c}コイン！`);}
+  const lm=fid(b.mine.mid);if(lm){lg.push(...aexp2(lm,exp));b.mine.hp=lm.hp;pty().forEach(m=>String(m.id)!==String(lm.id)&&aexp2(m,Math.floor(exp/4)));sv(state);}
+  b.eidx++;
+  if(b.eidx<b.enemies.length){const nx=b.enemies[b.eidx];lg.push("",`😈 ${b.trainer} は ${nx.nm()}（Lv.${nx.lv}）を繰り出した！`);updateBSceneEnemy(nx);return{lg,fin:false};}
+  state.wins++;if(b.kind==="nushi"){af("nushi");sv(state);}const extra=[];
+  if(b.questIdx!=null){extra.push(...cq(b.questIdx));if(G2.QUESTS[b.questIdx]?.boss==="emma_true"){const em=mkm("EMMA",48,Array(6).fill(13));const tp=amn(em);extra.push("🤝 EMMA（エマ）が"+(tp?"手持ち":"ボックス")+"に加わった！");}}
+  const q=b.questIdx!=null?G2.QUESTS[b.questIdx]:null;let pp=[];
+  if(b.kind==="nushi")pp=[...G2.NUSHI_WIN];else if(q?.kind==="gym")pp=[...(G2.GYMS[q.gym]?.win_pages||[])];
+  if(q?.clear_pages?.length)pp.push(...q.clear_pages);if(extra.length)pp.push(extra.join("\n"));
+  b.postScene=pp.length?{pages:pp}:null;
+  return{lg,fin:true};
+}
+function endBattle(logs){
+  const b=battle;const lm=fid(b?.mine?.mid);if(lm&&b)lm.hp=b.mine.hp;sv(state);battle=null;
+  // UIをマップモードに戻す
+  document.getElementById("bscene").style.display="none";
+  document.getElementById("battle-bottom").style.display="none";
+  document.getElementById("battle-ui").style.display="none";
+  document.getElementById("log-panel").style.display="flex";
+  document.getElementById("game-canvas").style.display="block";
+  document.getElementById("controls").style.display="block";
+  document.getElementById("action-btns").style.display="flex";
+  startRenderLoop();
+  pushLog(logs.join("\n")||"— — —");
+  if(b?.postScene?.pages?.length){
+    const q=b.questIdx!=null?G2.QUESTS[b.questIdx]:null;
+    const t=q?`📜 ${q.ch}「${q.title}」`:"🏆 勝利！";
+    showScene(t,b.postScene.pages,()=>updateObjective(),{fl:"✅ とじる"});
+  } else {updateObjective();}
+}
+function faint2(logs){
+  const lm=fid(battle.mine.mid);if(lm){lm.hp=0;sv(state);}
+  const al=alv(battle.mine.mid);
+  if(!al.length){logs.push("😵 手持ちが全滅した…🏥で回復しよう。");pushBLog(logs.join("\n"));setTimeout(()=>endBattle([]),2000);return;}
+  pushBLog([...logs,"⚠️ 次のポケモンを出そう！"].join("\n"));openSwModal(al,true);
+}
+function pushBLog(text){
+  const el=document.getElementById("bb-log");if(!el)return;
+  el.innerHTML=fmtT(text);el.scrollTop=el.scrollHeight;
+  pushLog(text);
+}
+function openBattle(msg){
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  document.getElementById("game-canvas").style.display="none";
+  document.getElementById("bscene").style.display="block";
+  document.getElementById("battle-bottom").style.display="block";
+  document.getElementById("battle-ui").style.display="flex";
+  document.getElementById("log-panel").style.display="none";
+  document.getElementById("controls").style.display="none";
+  document.getElementById("action-btns").style.display="none";
+  const b=battle,w=ce(),m=b.mine;
+  document.getElementById("bttl").textContent=b.title||"⚔️ バトル";
+  updateBSceneEnemy(w);document.getElementById("sp-m").src=spriteFile(m.sp);
+  pushBLog(msg);drawBUI();
+}
+function updateBSceneEnemy(f){document.getElementById("sp-e").src=spriteFile(f.sp);}
+function drawBUI(){
+  const b=battle;if(!b)return;
+  const w=ce(),m=b.mine;
+  const hc=f=>f.hp/f.mhp>.5?"hc-hi":f.hp/f.mhp>.2?"hc-mi":"hc-lo";
+  document.getElementById("en").textContent=`${G2.TYPE_EMOJI[w.type]||""}${w.nm()} Lv.${w.lv}${w.sts?" "+G2.STATUS_EMOJI[w.sts]:""}`;
+  document.getElementById("en").style.color=TC[w.type]||"#888";
+  const eb=document.getElementById("eb");eb.textContent=`HP ${hb(w.hp,w.mhp)} ${w.hp}/${w.mhp}`;eb.className=`fb ${hc(w)}`;
+  document.getElementById("espe").textContent=`素早さ ${w.ef("spe")}`;
+  document.getElementById("mn").textContent=`${G2.TYPE_EMOJI[m.type]||""}${m.nm()} Lv.${m.lv}${m.sts?" "+G2.STATUS_EMOJI[m.sts]:""}`;
+  document.getElementById("mn").style.color=TC[m.type]||"#888";
+  const mb=document.getElementById("mb");mb.textContent=`HP ${hb(m.hp,m.mhp)} ${m.hp}/${m.mhp}`;mb.className=`fb ${hc(m)}`;
+  document.getElementById("mspe").textContent=`素早さ ${m.ef("spe")}`;
+  const mvb=document.getElementById("mvbtns");mvb.innerHTML="";
+  for(const mv of m.moves.slice(0,4)){const md=G2.MOVES[mv];const btn=document.createElement("button");btn.className="mvb";btn.innerHTML=`${mv}<br><small>${G2.TYPE_EMOJI[md.type]||""}${md.power}</small>`;btn.onclick=()=>doMv(mv);mvb.appendChild(btn);}
+  const ab=document.getElementById("abtns");ab.innerHTML="";
+  const acts=[];
+  if(iw()){acts.push(["🟢 ボール",()=>doCt("balls")],["🔵 スゴボール",()=>doCt("gballs")],["🏃 にげる",()=>doRn()]);}
+  else acts.push(["🏳️ 降参",()=>doFf()]);
+  acts.push(["🎒 アイテム",openIM],["🔄 交代",openSw]);
+  if(state.keystone>0&&!b.mgUsed&&!m.isMg&&G2.MEGA_SPECIES.includes(m.sp)&&m.item==="メガストーン")acts.push(["💎 メガシンカ",doMg]);
+  for(const[lbl,fn]of acts){const btn=document.createElement("button");btn.className="ab";btn.textContent=lbl;btn.onclick=fn;ab.appendChild(btn);}
+  document.getElementById("bft").textContent=`🟢×${state.balls} 🔵×${state.gballs} 🧪×${state.potion} 💉×${state.hipotion} 💰${state.coins}`;
+}
+function doMv(mv){const lg=rturn(mv);const w=ce();if(w.hp<=0){const r=edown();const all=[...lg,...r.lg];pushBLog(all.join("\n"));if(r.fin)endBattle(all);else drawBUI();return;}if(battle.mine.hp<=0)faint2(lg);else{pushBLog(lg.join("\n"));drawBUI();}}
+function doRn(){const b=battle;b.runT++;const ms=b.mine.ef("spe"),ws=ce().ef("spe");const ch=Math.min(.95,Math.max(.2,ms*.5/Math.max(1,ws)+.15+.15*(b.runT-1)));if(Math.random()<ch){endBattle(["💨 うまく逃げ切れた！"]);return;}const lg=["💦 逃げられなかった！"];const w=ce(),wm=rc(w.moves);const[d2]=dmg(w,b.mine,wm);b.mine.hp=Math.max(0,b.mine.hp-d2);lg.push(`◀ ${w.nm()} の ${wm}！ ${d2} ダメージ`);const lm=fid(b.mine.mid);if(lm){lm.hp=b.mine.hp;sv(state);}if(b.mine.hp<=0)faint2(lg);else{pushBLog(lg.join("\n"));drawBUI();}}
+function doFf(){if(!confirm("降参しますか？\nコインの1/4を失います。"))return;const l=tq();endBattle(["🏳️ 降参した…",`💸 ${l}コインを落とした。`]);}
+function doCt(kind){const b=battle;if(!ui(kind)){toast(kind==="balls"?"🟢 ボールがない！":"🔵 スゴボールがない！");return;}
+  const w=ce();const bm=kind==="gballs"?1.6:1;let ch=G2.SPECIES[w.sp].catch*(0.3+1.4*(1-w.hp/w.mhp))*bm;if(w.sts==="ねむり"||w.sts==="こおり")ch*=2;else if(w.sts)ch*=1.5;ch=Math.min(.95,Math.max(.03,ch));
+  if(Math.random()<ch){const m=mkm(w.sp,w.lv,w.iv);const tp=amn(m);const lg=[`🎊 ${disp(m.sp)}（Lv.${m.lv}）を捕まえた！ ${ir(m.iv)}`];if(!tp)lg.push("📥 ボックスへ送られた！");endBattle(lg);}
+  else{const lg=[`🥎 ボールを投げた！`,`💨 おしい！（成功率${Math.floor(ch*100)}%）`];const wm=rc(w.moves);const[d2]=dmg(w,b.mine,wm);b.mine.hp=Math.max(0,b.mine.hp-d2);lg.push(`◀ ${w.nm()} の ${wm}！ ${d2} ダメージ`);const lm=fid(b.mine.mid);if(lm){lm.hp=b.mine.hp;sv(state);}if(b.mine.hp<=0)faint2(lg);else{pushBLog(lg.join("\n"));drawBUI();}}
+}
+function doMg(){const old=battle.mine.nm();battle.mine.mg();battle.mgUsed=true;pushBLog(`💠 キーストーンが光り出した！\n✨ ${old} は ${battle.mine.nm()} にメガシンカした！！`);drawBUI();}
+function openIM(){document.body.insertAdjacentHTML("beforeend",`<div class="mov" id="im"><div class="mbx"><h3>🎒 アイテム</h3><button class="mbb" onclick="useHl('potion',60)">🧪 キズぐすり×${state.potion}（+60HP）</button><button class="mbb" onclick="useHl('hipotion',null)">💉 いいキズぐすり×${state.hipotion}（全回復）</button><button class="mbb" onclick="document.getElementById('im').remove()">↩️ もどる</button></div></div>`);}
+function useHl(col,amt){document.getElementById("im")?.remove();const b=battle;if(b.mine.hp>=b.mine.mhp){toast("HPは満タンだ！");return;}if(!ui(col)){toast("持っていない！");return;}const bf=b.mine.hp;b.mine.hp=amt===null?b.mine.mhp:Math.min(b.mine.mhp,b.mine.hp+amt);const lm=fid(b.mine.mid);if(lm){lm.hp=b.mine.hp;sv(state);}const lg=[`🧪 HPが ${b.mine.hp-bf} 回復した！`];const w=ce(),wm=rc(w.moves);const[d2]=dmg(w,b.mine,wm);b.mine.hp=Math.max(0,b.mine.hp-d2);if(lm){lm.hp=b.mine.hp;sv(state);}lg.push(`◀ ${w.nm()} の ${wm}！ ${d2} ダメージ`);if(b.mine.hp<=0)faint2(lg);else{pushBLog(lg.join("\n"));drawBUI();}}
+function openSw(){const al=alv(battle.mine.mid);if(!al.length){toast("交代できるポケモンがいない！");return;}openSwModal(al,false);}
+function openSwModal(al,forced){let h=`<div class="mov" id="swm"><div class="mbx"><h3>🔄 交代</h3>`;for(const m of al){const[mhp]=mst(m);h+=`<button class="mbb" onclick="doSw('${m.id}',${forced})">${G2.TYPE_EMOJI[G2.SPECIES[m.sp].type]||""} ${disp(m.sp)} Lv.${m.lv} HP ${m.hp}/${mhp}</button>`;}if(!forced)h+=`<button class="mbb" onclick="document.getElementById('swm').remove()">↩️ もどる</button>`;document.body.insertAdjacentHTML("beforeend",h+"</div></div>");}
+function doSw(id,forced){document.getElementById("swm")?.remove();const b=battle;const lm=fid(b.mine.mid);if(lm&&b.mine.hp>0)lm.hp=b.mine.hp;const nxt=fid(id);if(!nxt)return;b.mine=Fighter.from(nxt);const lg=[`🔄 いけ！ ${b.mine.nm()}！`];document.getElementById("sp-m").src=spriteFile(b.mine.sp);if(!forced){const w=ce(),wm=rc(w.moves);const[d2]=dmg(w,b.mine,wm);b.mine.hp=Math.max(0,b.mine.hp-d2);lg.push(`◀ ${w.nm()} の ${wm}！ ${d2} ダメージ`);const lm2=fid(b.mine.mid);if(lm2){lm2.hp=b.mine.hp;sv(state);}if(b.mine.hp<=0){faint2(lg);return;}}pushBLog(lg.join("\n"));drawBUI();}
+function beginNushiBattle(){
+  const ld2=lad();if(!ld2||ld2.hp<=0){toast("💀 手持ちにポケモンがいない！");return;}
+  const mine=Fighter.from(ld2);
+  const bs=G2.BOSSES["nushi"];
+  const enemies=bs.team.map(([sp,lv])=>new Fighter(sp,lv,Array(6).fill(15),bs.boost));
+  for(const f of enemies)msn(f.sp);
+  stB({mine,enemies,kind:"nushi",trainer:null,questIdx:null,title:"⚡ 高原のヌシ・ゴロドン"});
+  openBattle("⚡ ヌシが立ち上がった！");
+}
+function beginQBattle(idx){if(state.story_pos!==idx){toast("✅ この戦いは終わっている！");return;}const q=G2.QUESTS[idx];const ld2=lad();if(!ld2||ld2.hp<=0){toast("💀 手持ちにポケモンがいない！");return;}const mine=Fighter.from(ld2);let enemies,kind,trainer,title;if(q.kind==="gym"){const g=G2.GYMS[q.gym];enemies=g.team.map(([sp,lv])=>new Fighter(sp,lv,Array(6).fill(10)));kind="gym";trainer=q.gym;title=`🏟️ ${q.title}`;}else{const bs=G2.BOSSES[q.boss];const iv2=q.boss==="blocker"?Array(6).fill(15):Array(6).fill(13);enemies=bs.team.map(([sp,lv])=>new Fighter(sp,lv,iv2,bs.boost));kind=q.kind==="wildboss"?"blocker":q.boss;trainer=bs.trainer;title=`⚔️ ${q.title}`;}for(const f of enemies)msn(f.sp);stB({mine,enemies,kind,trainer,questIdx:idx,title});openBattle("⚔️ 戦闘開始！");}
+
+// ===== インベントリ =====
+let invTab="party";
+function toggleInv(){
+  const el=document.getElementById("inv");
+  el.style.display=el.style.display==="block"?"none":"block";
+  if(el.style.display==="block")showInvTab(invTab);
+}
+function showInvTab(tab){
+  invTab=tab;
+  document.querySelectorAll(".inv-tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".inv-tab").forEach(t=>{if(t.textContent.includes(tab==="party"?"手持ち":tab==="box"?"ボックス":tab==="note"?"ノート":tab==="dex"?"図鑑":"ショップ"))t.classList.add("active");});
+  const ic=document.getElementById("inv-content");
+  if(tab==="party")buildParty(ic);else if(tab==="box")buildBox(ic);else if(tab==="note")buildNote(ic);else if(tab==="dex")buildDex(ic);else if(tab==="shop")buildShop(ic);
+}
+function openInvShop(){toggleInv();showInvTab("shop");}
+function buildParty(el){const p=pty();let h=`<h2 style="font-family:var(--px);font-size:10px;color:var(--ac);margin-bottom:12px">📦 手持ち（${p.length}/${PM}）</h2>`;for(const m of p){const[mhp]=mst(m),ev=G2.SPECIES[m.sp].evolve,tc=TC[G2.SPECIES[m.sp].type]||"var(--bd)",canEv=ev&&m.lv>=ev[0];h+=`<div class="mc" style="border-left-color:${tc}"><b>${G2.TYPE_EMOJI[G2.SPECIES[m.sp].type]||""} ${disp(m.sp)}</b> Lv.${m.lv} ${ir(m.iv)} ${m.isLd?"⭐":""}<br>HP ${hb(m.hp,mhp)} ${m.hp}/${mhp}<br>技: ${m.moves.map(disp).join("・")}${m.item?`<br>持ち物: ${m.item}`:""}${canEv?`<br><span style="color:#f5c518">🌟 進化可能（→${ev[1]}）</span>`:""}
+<div class="mca"><button onclick="setLd2('${m.id}')">⭐先頭</button>${canEv?`<button onclick="tryEv2('${m.id}')">🌟進化</button>`:""}<button onclick="s2b2('${m.id}')">📥ボックスへ</button><button onclick="openEq2('${m.id}')">🎁持ち物</button></div></div>`;}el.innerHTML=h;}
+function buildBox(el){const b=bxl(),p=pty();let h=`<h2 style="font-family:var(--px);font-size:10px;color:var(--ac);margin-bottom:12px">📥 ボックス（${b.length}体）</h2>`;if(!b.length)h+=`<p style="color:var(--mu)">ボックスは空です</p>`;for(const m of b){const[mhp]=mst(m);h+=`<div class="mc"><b>${G2.TYPE_EMOJI[G2.SPECIES[m.sp].type]||""} ${disp(m.sp)}</b> Lv.${m.lv} ${ir(m.iv)}<br>HP ${m.hp}/${mhp}<div class="mca">${p.length<PM?`<button onclick="f2p2('${m.id}')">⬆️手持ちへ</button>`:""}</div></div>`;}el.innerHTML=h;}
+function buildDex(el){let h=`<h2 style="font-family:var(--px);font-size:10px;color:var(--ac);margin-bottom:12px">📖 ポケモン図鑑</h2><div class="dxgr">`;for(const[name,d]of Object.entries(G2.SPECIES)){const own=state.dex_owned.includes(name),seen=state.dex_seen.includes(name),r=G2.RARE_SPECIES.includes(name)?" 🌟":"";if(own)h+=`<div class="dxe own">${G2.TYPE_EMOJI[d.type]||""} ${disp(name)}${r}</div>`;else if(seen)h+=`<div class="dxe">👁️ ${disp(name)}${r}</div>`;else h+=`<div class="dxe">❓ ？？？</div>`;}h+=`</div>`;el.innerHTML=h;}
+function buildShop(el){const S=[["balls","🟢 ボール",20,"捕獲用",0],["potion","🧪 キズぐすり",30,"HP+60",0],["gballs","🔵 スゴボール",60,"捕獲率1.6倍",2],["hipotion","💉 いいキズぐすり",80,"全回復",3],["it_power","🥊 パワーリスト",200,"物理技1.1倍",4],["it_lens","🔍 ミラクルレンズ",200,"特殊技1.1倍",4],["it_sole","👟 クイックソール",250,"素早さ1.2倍",5],["it_belt","🥋 がんばりベルト",250,"被ダメ0.9倍",5]];let h=`<h2 style="font-family:var(--px);font-size:10px;color:var(--ac);margin-bottom:12px">🛒 ショップ</h2><p style="color:var(--mu);margin-bottom:7px">💰 ${state.coins}コイン　🎖️バッジ${state.badges}個</p>`;for(const[col,label,cost,note,req]of S){if(state.badges>=req)h+=`<button class="shpb" onclick="doBuy2('${col}',${cost})">${label}（${cost}💰）<small>${note}</small></button>`;else h+=`<div class="shplk">🔒 バッジ${req}個で入荷</div>`;}el.innerHTML=h;}
+function buildNote(el){const pos=state.story_pos;const goal=pos>=G2.QUESTS.length?"🏆 全クリア済み":(q=>`${q.ch}「${q.title}」`)(G2.QUESTS[pos]);let h=`<h2 style="font-family:var(--px);font-size:10px;color:var(--ac);margin-bottom:12px">🗺️ ぼうけんノート</h2><div class="nse"><b>📜 今の目的</b>${goal}</div><div class="nse"><b>🎖️ バッジ</b> ${state.badges}/8個</div><div class="nse"><b>🎒 持ち物</b><br>🟢×${state.balls} 🔵×${state.gballs} 🧪×${state.potion} 💉×${state.hipotion}<br>💰 ${state.coins}コイン</div>`;el.innerHTML=h;}
+function setLd2(id){pty().forEach(m=>m.isLd=String(m.id)===String(id));sv(state);showInvTab("party");}
+function tryEv2(id){if(!confirm("進化させますか？"))return;const r=ev2(id);if(r)toast(`🎉 ${disp(r[0])} は ${disp(r[1])} に進化した！！`);showInvTab("party");}
+function s2b2(id){if(toBox2(id))showInvTab("party");else toast("❌ 手持ちを空にはできない！");}
+function f2p2(id){if(fromBox2(id))showInvTab("box");else toast(`❌ 手持ちがいっぱい（${PM}体まで）！`);}
+function doBuy2(col,cost){if(bi(col,cost))showInvTab("shop");else toast("❌ コインが足りない！");}
+function openEq2(id){const m=fid(id);if(!m)return;const items=["パワーリスト","ミラクルレンズ","クイックソール","がんばりベルト","メガストーン"];let h=`<div class="mov" id="eqm"><div class="mbx"><h3>🎁 ${disp(m.sp)} の持ち物</h3><p style="font-size:11px;color:var(--mu)">現在: ${m.item||"なし"}</p>`;for(const item of items){const c=HC[item];if((state[c]||0)>0||m.item===item)h+=`<button class="mbb" onclick="eqIt2('${id}','${item}')">${item}（残${state[c]||0}個）</button>`;}if(m.item)h+=`<button class="mbb" onclick="eqIt2('${id}',null)">❌ 外す</button>`;h+=`<button class="mbb" onclick="document.getElementById('eqm').remove()">↩️ もどる</button></div></div>`;document.body.insertAdjacentHTML("beforeend",h);}
+function eqIt2(id,item){document.getElementById("eqm")?.remove();const ok=sh(id,item===null?null:item);toast(ok?(item?`🎁 ${item} を持たせた！`:"🎁 持ち物を外した！"):"❌ 在庫切れ");showInvTab("party");}
+
+// ===== キーボード操作（1押し1歩） =====
+const KEY_DIR={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",KeyW:"up",KeyS:"down",KeyA:"left",KeyD:"right"};
+document.addEventListener("keydown",e=>{
+  if(e.repeat)return;
+  const dir=KEY_DIR[e.code];
+  if(dir){document.getElementById(`dbtn-${dir}`)?.classList.add("active");}
+  if(e.code==="KeyE"){e.preventDefault();toggleInv();return;}
+  if(e.code==="Space"||e.code==="Enter"||e.code==="KeyZ"){e.preventDefault();examine();return;}
+  if(dir)tryMove(dir);
+});
+document.addEventListener("keyup",e=>{
+  const dir=KEY_DIR[e.code];
+  if(dir)document.getElementById(`dbtn-${dir}`)?.classList.remove("active");
+});
+
+// ===== Dpad タッチ操作（タップで1歩） =====
+document.querySelectorAll(".dpad-btn").forEach(btn=>{
+  const dir=btn.dataset.dir;
+  btn.addEventListener("pointerdown",e=>{
+    e.preventDefault();
+    btn.classList.add("active");
+    tryMove(dir);
+  });
+  btn.addEventListener("pointerup",  e=>{e.preventDefault();btn.classList.remove("active");});
+  btn.addEventListener("pointercancel",()=>btn.classList.remove("active"));
+});
+document.getElementById("btn-action").addEventListener("click",examine);
+document.getElementById("btn-inv").addEventListener("click",toggleInv);
+
+// ===== ゲーム開始 =====
+function startNew(){
+  const name=document.getElementById("pname").value.trim()||"トレーナー";
+  const charSel=document.getElementById("char-sel")?.value||"male";
+  state=ng(name);state.char=charSel;sv(state);
+  document.getElementById("ti").style.display="none";
+  document.getElementById("grd").style.display="grid";
+  preloadAssets();
+  player.x=MAPS.hoshino.playerStart.x;player.y=MAPS.hoshino.playerStart.y;
+  loadMap("hoshino");
+  pushLog("🌟 アストラ地方の冒険が始まった！\nまずはホシノタウンの研究所へ行こう。");
+  updateObjective();
+}
+function continueGame(){
+  const s=ld();if(!s){toast("セーブデータがないよ！");return;}
+  state=s;
+  document.getElementById("ti").style.display="none";
+  document.getElementById("grd").style.display="grid";
+  player.x=state.playerX||9;player.y=state.playerY||12;
+  preloadAssets();loadMap(state.currentMap||"hoshino");
+  pushLog("▶ ゲームを再開した");updateObjective();
+}
+function resetGame(){if(!confirm("データを消してはじめからにしますか？"))return;localStorage.removeItem("astra_tile");location.reload();}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  document.getElementById("newbtn").onclick=startNew;
+  document.getElementById("conbtn").onclick=continueGame;
+  document.getElementById("rsbtn").onclick=resetGame;
+  // キャラ選択を追加
+  const inp=document.getElementById("pname");
+  const sel=document.createElement("select");
+  sel.id="char-sel";sel.style="padding:8px 14px;background:var(--p2);border:2px solid var(--bd);border-radius:5px;color:var(--tx);font-family:var(--jp);font-size:14px;width:100%;max-width:300px;margin-top:-4px";
+  sel.innerHTML=`<option value="male">👦 男キャラ</option><option value="female">👧 女キャラ</option>`;
+  inp.after(sel);
+  const s=ld();if(s){const cb=document.getElementById("conbtn");cb.disabled=false;cb.textContent=`▶ つづきから（${s.name}）`;}
+});
+</script>
+</body>
+</html>
