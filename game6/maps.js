@@ -1,6 +1,4 @@
-// ===========================
-// maps.js - アストラ地方 全マップデータ（ユーザー編集版）
-// ===========================
+// maps.js
 const TILE = {
   GRASS:0, TALL:1, DIRT:2, PATH:3, WATER_PASS:4,
   SAND:5, SNOW:6, ROCK:7, ICE:8, FLOOR:9,
@@ -17,10 +15,9 @@ const TILE_IMGS = {
   12:"tiles/wall.png",13:"tiles/rock_floor.png", 14:"tiles/wall.png",
   15:"tiles/wall.png"
 };
-
-const G=T.GRASS, TL=T.TALL, D=T.DIRT, P=T.PATH, W=T.WATER;
-const S=T.SAND, SN=T.SNOW, R=T.ROCK, IC=T.ICE, FL=T.FLOOR;
-const TR=T.TREE, WA=T.WALL, RO=T.ROCK_OBJ, FE=T.FENCE, WI=T.WALL_IN;
+const G=T.GRASS,TL=T.TALL,D=T.DIRT,P=T.PATH,W=T.WATER;
+const S=T.SAND,SN=T.SNOW,R=T.ROCK,IC=T.ICE,FL=T.FLOOR;
+const TR=T.TREE,WA=T.WALL,RO=T.ROCK_OBJ,FE=T.FENCE,WI=T.WALL_IN;
 
 const MAPS = {
   "hoshino": {
