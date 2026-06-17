@@ -111,41 +111,10 @@ const MAPS={
     "events": [
       {
         "x": 3,
-        "y": 0,
-        "type": "exit",
-        "target": {
-          "map": "route1",
-          "x": 2,
-          "y": 6
-        }
-      },
-      {
-        "x": 3,
         "y": 2,
         "type": "door",
         "target": {
           "map": "hoshino_lab",
-          "x": 2,
-          "y": 3
-        }
-      },
-      {
-        "x": 6,
-        "y": 3,
-        "type": "locked",
-        "target": {
-          "map": "route7",
-          "x": 1,
-          "y": 1
-        },
-        "requireStory": 31
-      },
-      {
-        "x": 2,
-        "y": 4,
-        "type": "door",
-        "target": {
-          "map": "hoshino_house2",
           "x": 2,
           "y": 3
         }
@@ -161,15 +130,24 @@ const MAPS={
         }
       },
       {
-        "x": 3,
-        "y": 6,
-        "type": "locked",
+        "x": 2,
+        "y": 4,
+        "type": "door",
         "target": {
-          "map": "nexus",
+          "map": "hoshino_house2",
           "x": 2,
-          "y": 5
-        },
-        "requireStory": 31
+          "y": 3
+        }
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "type": "exit",
+        "target": {
+          "map": "route1",
+          "x": 2,
+          "y": 6
+        }
       }
     ],
     "lockedTiles": [
@@ -685,16 +663,6 @@ const MAPS={
     "npcs": [],
     "events": [
       {
-        "x": 2,
-        "y": 0,
-        "type": "exit",
-        "target": {
-          "map": "route2",
-          "x": 1,
-          "y": 1
-        }
-      },
-      {
         "x": 0,
         "y": 2,
         "type": "door",
@@ -702,6 +670,16 @@ const MAPS={
           "map": "minato_gym",
           "x": 1,
           "y": 0
+        }
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "type": "exit",
+        "target": {
+          "map": "route2",
+          "x": 1,
+          "y": 1
         }
       },
       {
@@ -1074,16 +1052,6 @@ const MAPS={
     ],
     "events": [
       {
-        "x": 2,
-        "y": 0,
-        "type": "exit",
-        "target": {
-          "map": "route3",
-          "x": 2,
-          "y": 11
-        }
-      },
-      {
         "x": 0,
         "y": 3,
         "type": "door",
@@ -1091,6 +1059,16 @@ const MAPS={
           "map": "iwane_gym",
           "x": 1,
           "y": 0
+        }
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "type": "exit",
+        "target": {
+          "map": "route3",
+          "x": 2,
+          "y": 11
         }
       },
       {
@@ -1517,16 +1495,6 @@ const MAPS={
     ],
     "events": [
       {
-        "x": 3,
-        "y": 0,
-        "type": "exit",
-        "target": {
-          "map": "route4",
-          "x": 3,
-          "y": 7
-        }
-      },
-      {
         "x": 4,
         "y": 3,
         "type": "door",
@@ -1534,6 +1502,16 @@ const MAPS={
           "map": "hanami_gym",
           "x": 1,
           "y": 0
+        }
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "type": "exit",
+        "target": {
+          "map": "route4",
+          "x": 3,
+          "y": 7
         }
       },
       {
@@ -2330,16 +2308,6 @@ const MAPS={
     ],
     "events": [
       {
-        "x": 2,
-        "y": 0,
-        "type": "exit",
-        "target": {
-          "map": "route5",
-          "x": 2,
-          "y": 8
-        }
-      },
-      {
         "x": 0,
         "y": 2,
         "type": "door",
@@ -2350,13 +2318,13 @@ const MAPS={
         }
       },
       {
-        "x": 5,
-        "y": 3,
+        "x": 2,
+        "y": 0,
         "type": "exit",
         "target": {
-          "map": "tsukiyo_lake",
-          "x": 1,
-          "y": 4
+          "map": "route5",
+          "x": 2,
+          "y": 8
         }
       },
       {
@@ -2367,6 +2335,16 @@ const MAPS={
           "map": "yukidoke_peak",
           "x": 1,
           "y": 1
+        }
+      },
+      {
+        "x": 5,
+        "y": 3,
+        "type": "exit",
+        "target": {
+          "map": "tsukiyo_lake",
+          "x": 1,
+          "y": 4
         }
       },
       {
@@ -2781,6 +2759,16 @@ const MAPS={
     ],
     "events": [
       {
+        "x": 4,
+        "y": 4,
+        "type": "door",
+        "target": {
+          "map": "ryuga_gym",
+          "x": 1,
+          "y": 0
+        }
+      },
+      {
         "x": 6,
         "y": 0,
         "type": "exit",
@@ -2798,16 +2786,6 @@ const MAPS={
           "map": "route8",
           "x": 5,
           "y": 4
-        }
-      },
-      {
-        "x": 4,
-        "y": 4,
-        "type": "door",
-        "target": {
-          "map": "ryuga_gym",
-          "x": 1,
-          "y": 0
         }
       },
       {
@@ -3025,16 +3003,6 @@ const MAPS={
     "npcs": [],
     "events": [
       {
-        "x": 0,
-        "y": 0,
-        "type": "exit",
-        "target": {
-          "map": "nexus",
-          "x": 2,
-          "y": 1
-        }
-      },
-      {
         "x": 5,
         "y": 1,
         "type": "door",
@@ -3042,6 +3010,16 @@ const MAPS={
           "map": "ryuga_house",
           "x": 1,
           "y": 0
+        }
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "type": "exit",
+        "target": {
+          "map": "nexus",
+          "x": 2,
+          "y": 1
         }
       },
       {
@@ -3183,16 +3161,6 @@ const MAPS={
     ],
     "events": [
       {
-        "x": 2,
-        "y": 0,
-        "type": "exit",
-        "target": {
-          "map": "hoshino",
-          "x": 3,
-          "y": 5
-        }
-      },
-      {
         "x": 0,
         "y": 3,
         "type": "door",
@@ -3210,6 +3178,16 @@ const MAPS={
           "map": "nexus_gym",
           "x": 1,
           "y": 0
+        }
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "type": "exit",
+        "target": {
+          "map": "hoshino",
+          "x": 3,
+          "y": 5
         }
       },
       {
